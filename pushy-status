@@ -1,0 +1,107 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 & 1
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 23-03-2024
+#
+# pushy-status
+# discription: shows the status of files in the current directory,index, and the repository.
+# ===========================================================================================
+
+#Store location of status file
+status_file=.pushy/status.txt
+#Index directory
+index_dir='.pushy/index'
+#Last commit directory
+suffix=$(pushy-log | head -n1 | cut -d ' ' -f1)
+commit_dir=".pushy/commits/commit.$suffix"
+
+
+#Find all ordinary files in the current directory 
+find * -maxdepth 0 -type f 2> /dev/null|
+while IFS= read -r file
+do
+    #Check if the file is already tracked in status
+    if grep -q "^$file" "$status_file"
+    then
+        #File already tracked 
+        continue       
+    else
+        #Set file state in status as untracked
+        echo "$file - untracked" >> "$status_file"
+    fi
+done
+
+
+#Test Status for each file
+while IFS= read -r stat_line
+do
+    status=$(echo $stat_line | cut -d '-' -f1 | tr -d ' ')
+        
+    #Check if index file is different from current directory 
+    diff -q "$index_dir/$status" "$status" > /dev/null 2>&1
+    curr_status=$? 
+    #Check if index file is different from latest commit 
+    diff -q "$index_dir/$status" "$commit_dir/$status" > /dev/null 2>&1
+    commit_status=$? #0 - same ; 1 - different
+
+    #File is Same in all states (& file present in all) 
+    if test "$curr_status" -eq 0 -a "$commit_status" -eq 0 -a -f "$status" -a -f "$commit_dir"/"$status" -a -f "$index_dir"/"$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - same as repo/" "$status_file"
+    
+    #File Different in cur dir but Same in index and commit (& file present in cur dir)
+    elif test "$curr_status" -ne 0 -a "$commit_status" -eq 0 -a -f "$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - file changed, changes not staged for commit/" "$status_file"
+
+    #File Same in cur dir and index but different in commit (and file present in commit)
+    elif test "$curr_status" -eq 0 -a "$commit_status" -ne 0 -a -f "$commit_dir"/"$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - file changed, changes staged for commit/" "$status_file"
+
+    #File is different in all states (and file present in all)
+    elif test "$curr_status" -ne 0 -a "$commit_status" -ne 0 -a -f "$status" -a -f "$commit_dir"/"$status" -a -f "$index_dir"/"$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - file changed, different changes staged for commit/" "$status_file"
+    fi
+
+    #File is present in cur dir but not present in index and commit
+    if test -f "$status" -a ! -f "$index_dir"/"$status" -a ! -f "$commit_dir"/"$status"
+    then
+        sed -i "s/^"$status\ .*"/"$status" - untracked/" "$status_file"
+    
+    #File is not present in all states
+    elif test ! -f "$status" -a ! -f "$index_dir"/"$status" -a ! -f "$commit_dir"/"$status"
+    then
+        sed -i "/^"$status\ .*"/d" "$status_file"
+
+    #File externally deleted: file present in index but not currerent directory
+    elif test -f "$index_dir"/"$status" -a ! -f "$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - file deleted/" "$status_file"
+
+    #File is different in index and commit and file deleted externally
+    elif test "$commit_status" -ne 0 -a ! -f "$status" -a -f "$commit_dir"/"$status" -a -f "$index_dir"/"$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - file deleted, changes staged for commit/" "$status_file"
+    fi
+
+    #File changed after adding to index (status is added to index but file different from cur dir)
+    if test "$stat_line" = "$status - added to index" -a "$curr_status" -ne 0 -a -f "$status" 
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - added to index, file changed/" "$status_file"
+
+    #File externally deleated after adding to index (status is added to index but file not present in cur dir)
+    elif test "$stat_line" = "$status - added to index" -a ! -f "$status"
+    then 
+        sed -i "s/^"$status\ .*"/"$status" - added to index, file deleted/" "$status_file"
+    fi
+done < "$status_file" | grep -v "^pushy-*\|^test...sh" #Ignore pushy commands & test files
+
+#Sort the status file based on file name
+sort -o "$status_file" "$status_file"
+#Display the Status 
+cat ".pushy/status.txt"

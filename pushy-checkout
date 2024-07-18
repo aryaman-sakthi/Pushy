@@ -1,0 +1,61 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 2
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 25-03-2024
+#
+# pushy-branch
+# discription: this command switches the active branch.
+# ===========================================================================================
+
+#Test for valid arguments
+if test "$#" -ne 1 
+then 
+    echo 1>&2 "usage: pushy-checkout <branch>"
+    exit 5
+fi
+
+#Store argument in branch_name
+branch_name="$1"
+
+#Get active_branch 
+active_branch=$(cat ".pushy/branches/active_branch")
+#Get current directory path
+path=$(pwd)
+
+
+#Check if branch dosent exists (and isnt master)
+if test ! -d ".pushy/branches/$branch_name" -a "$branch_name" != 'master'
+    then 
+        echo 1>&2 "$0: error: unknown branch '$branch_name'"
+        exit 5
+
+#Check if branch is already active
+elif test "$branch_name" = "$active_branch"
+    then
+        echo "Already on '$branch_name'"
+
+#Set active_branch to specified branch
+else
+    echo "$branch_name" > ".pushy/branches/active_branch"
+    
+    #Change files in directory correspondin to the branch :
+    
+    #Remove Ordinary files in the dir
+    find * -maxdepth 0 -type f | grep -v "^pushy-*\|^test.*.sh" | #Get all ordinary files in the directory
+    while IFS= read -r file
+    do 
+        rm "$file"
+    done
+    #Add files from the branch to the dir
+    ls -A ".pushy/branches/$branch_name" |
+    while IFS= read -r b_file
+    do  
+        cp ".pushy/branches/$branch_name/$b_file" .
+    done
+
+    #Indicate successful switch via msg
+    echo "Switched to branch '$branch_name'"
+fi

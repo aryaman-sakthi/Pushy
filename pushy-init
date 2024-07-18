@@ -1,0 +1,35 @@
+#!/bin/dash
+
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 21-03-2024
+#
+# pushy-init 
+# discription: this command creates an empty Pushy repository
+# ===========================================================================================
+
+
+#Test if directory ".pushy" already exists
+if test -d '.pushy'
+then 
+    #Print error message and redirect it to stderr
+    echo 1>&2 "$0: error: .pushy already exists"
+    exit 1
+
+else
+    #Create an empty directory named .pushy
+    mkdir ".pushy"
+    echo "Initialized empty pushy repository in .pushy"
+
+    #Make initial files and subdirectories in .pushy
+    mkdir ".pushy/index"
+    mkdir ".pushy/commits"
+    mkdir ".pushy/branches"
+    touch ".pushy/branches/active_branch"
+    touch ".pushy/commit-log.txt"
+    touch ".pushy/status.txt"
+fi
+

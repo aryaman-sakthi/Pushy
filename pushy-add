@@ -1,0 +1,56 @@
+#!/bin/dash
+
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 21-03-2024
+#
+# pushy-add
+# discription: this command adds the contents of one or more files to the "index".
+# ===========================================================================================
+
+
+#Gives error if .pushy repository does not exist
+if ! test -d ".pushy"
+then 
+    #Print error message and redirect it to stderr
+    echo 1>&2 "$0: error: pushy repository directory .pushy not found"
+    exit 1
+fi
+
+#Track Status wiout displaying 
+pushy-status 1> /dev/null 
+
+#Get the path to the index directory 
+index_dir=$(pwd)"/.pushy/index"
+
+
+for file in "$@"
+do 
+    #Check if file exists in current directory
+    if test -f "$file" 
+    then 
+        #Store the file in the Index of .pushy
+        cp "$file" "$index_dir/$file" 
+
+
+        #Update Status of the file
+        sed -i "s/^"$file\ .*"/"$file" - added to index/" ".pushy/status.txt"
+    
+    else
+        #Check if file exists in Index
+        if test -f "$index_dir/$file"
+        then 
+            #Remove file from Index
+            rm "$index_dir/$file"
+
+        else 
+        #Gives error if file does not exist in both Index and current dir
+        echo 1>&2 "$0: error: can not open '$file'"
+        exit 2
+        fi
+    fi
+done
+

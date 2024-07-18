@@ -1,0 +1,102 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 2
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 24-03-2024
+#
+# pushy-branch
+# discription: this command saves a copy of all files in the index to the repository.
+# ===========================================================================================
+
+
+#Store current path 
+path=$(pwd) 
+
+#Test if branch is run before first commit
+if test $(ls -A ".pushy/commits" | wc -l) -eq 0
+then 
+    echo 1>&2 "$0: error: this command can not be run until after the first commit"
+    exit 5
+fi
+
+#Get Last commit directory
+suffix=$(pushy-log | head -n1 | cut -d ' ' -f1)
+commit_dir=".pushy/commits/commit.$suffix"
+
+#Test for valid arguments and store operation type and branch name (if applicable)
+if test "$#" -eq 2 -a "$1" = "-d" 
+then 
+    operation="branch_delete"
+    branch_name="$2"
+
+elif test "$#" -eq 1 -a "$1" != "-d"
+then
+    if test "$1" = "-d"
+    then
+        echo 1>&2 "$0: error: branch name required"
+        exit 5
+    else
+        operation="branch_create"
+        branch_name="$1"
+    fi
+
+elif test "$#" -eq 0 
+then 
+    operation="branch_display"
+
+else
+    echo 1>&2 "usage: pushy-branch [-d] <branch>"
+    exit 5
+fi
+
+
+#Display names of all branches
+if test "$operation" = 'branch_display'
+then
+    ls -A .pushy/branches | grep -v "^active_branch$" |
+    while IFS= read -r branch
+    do  
+        echo "$branch"
+    done
+
+#Creating a new branch
+elif test "$operation" = 'branch_create'
+then    
+    #Check if branch already exists
+    if test -d ".pushy/branches/$branch_name"
+    then 
+        echo 1>&2 "$0: error: branch '$branch_name' already exists"
+        exit 5
+    fi
+
+    #Create the branch in the pushy repository
+    mkdir ".pushy/branches/$branch_name"
+
+    #Copy ordinary files in dir to the branch
+    find * -maxdepth 0 -type f | grep -v "^pushy-*\|^test.*.sh" | #Get all ordinary files in the directory
+    while IFS= read -r file
+    do 
+        cp "$file" ".pushy/branches/$branch_name"
+    done
+
+elif test "$operation" = 'branch_delete'
+then
+    #Check if branch to be deleted is master
+    if test "$branch_name" = 'master'
+    then 
+        echo 1>&2 "$0: error: can not delete branch '$branch_name': default branch"
+        exit 5
+
+    #Check if branch does not exist
+    elif test ! -d ".pushy/branches/$branch_name" 
+    then 
+        echo 1>&2 "$0: error: branch '$branch_name' doesn't exist"
+        exit 5
+    fi
+
+    #Delete the branch in the pushy repository
+    rm -r ".pushy/branches/$branch_name"
+    echo "Deleted branch '$branch_name'"
+fi

@@ -1,0 +1,28 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 22-03-2024
+#
+# pushy-log
+# discription: this command prints a line for every commit made  to the repository.
+# ===========================================================================================
+
+
+#Path to the log file 
+path=$(pwd)/.pushy
+
+#Check if commit log is empty
+commit_lines=$(cat "$path"/commit-log.txt | wc -l)
+
+#OPTIONAL error handeling
+#if  test "$commit_lines" -eq 0
+#then 
+#    echo 1<&2 "No commits made yet"
+#    exit 3
+#fi
+
+#Display each line of the log in order of commits 
+sort -nr "$path"/commit-log.txt

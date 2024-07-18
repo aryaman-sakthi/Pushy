@@ -1,0 +1,144 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 & 1
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 22-03-2024
+#
+# pushy-commit
+# discription: this command saves a copy of all files in the index to the repository.
+# ===========================================================================================
+
+
+#Test for correct arguments
+if test "$#" -eq 3 -a "$1" = "-a" -a "$2" = "-m"
+then 
+    commit_type="Add_commit"
+elif test "$#" -eq 2 -a "$1" = "-m"
+then
+    commit_type="standard_commit"
+else
+    echo 1>&2 "usage: pushy-commit [-a] -m commit-message"
+    exit 3
+fi 
+
+#Check commit type and execute accordingly
+if test "$commit_type" = "Add_commit"
+then 
+    #Update the content of all files in Index before commiting
+    index_files=$(ls -A .pushy/index/)
+    pushy-add $index_files
+
+    #Store message argument in a variable
+    message="$3"
+
+else 
+    #Proceed with standard commit
+    message="$2"
+fi
+
+#Check if previous commit exist 
+suffix=0
+
+while true
+do 
+    commit="commit.$suffix"
+
+    if test -d ".pushy/commits/$commit"
+    then 
+        #Store curret commit number in suffix
+        suffix=$((suffix + 1))
+    else 
+        break
+    fi
+done
+
+#Directory paths
+dir1=".pushy/index"
+dir2=".pushy/commits/commit.$((suffix-1))"
+
+#Count number of files in both directories
+index_num=$(ls -A $dir1 | wc -l) 
+commit_num=$(ls -A $dir2 2>/dev/null | wc -l)
+
+#Check if number of files in both directory are equal
+if test "$index_num" -eq "$commit_num"   
+then
+    #Check if any changes were made before current commit
+    file_list=$(ls -A $dir1)
+    all_same=0 #true
+    for file in $file_list
+    do   
+        #Check if its the first commit
+        if test $suffix -eq 0
+        then    
+            all_same=1 #false
+            break
+        fi
+        
+        #Test if file in index exists in last commit
+        if test -f "$dir2/$file"
+        then 
+            #check if contents are same
+            diff -q "$dir1/$file" "$dir2"/"$file" > /dev/null 2>&1
+            status=$? #Catch exit status 
+            if test "$status" -ne 0
+            then   #File has changed
+                #Exit out of loop and proceed with commit
+                all_same=1 #false
+                break
+            fi
+        else
+            #New file present in index, exit loop and proceed with commit
+            all_same=1 #false
+            break
+        fi
+    done
+else
+    all_same=1 #false
+fi
+
+#Catch the all_same status from the subshell exit if true
+if test "$all_same" -eq 0
+then 
+    #No new files or changes found, no commit necessary
+    echo "nothing to commit"
+    exit 3
+fi
+
+#Create a new commit state and add it to the commit-log
+mkdir  ".pushy/commits/commit.$suffix"
+echo "$suffix $message" >> .pushy/commit-log.txt
+
+#Get active_branch name
+branch=$(cat ".pushy/branches/active_branch")
+
+#Commit current index state as a new commit
+ls -A .pushy/index/|
+while IFS= read -r file
+do 
+    #Create a copy of the file to the new commit 
+    cp ".pushy/index/$file" ".pushy/commits/commit.$suffix"
+done
+
+#If first commit then create master branch
+if test "$suffix" -eq 0
+then 
+    pushy-branch "master"
+
+    #Set active branch to master
+    echo 'master' > ".pushy/branches/active_branch"
+
+else
+    #Add commited files to the branch (unless first commit)
+    ls -A ".pushy/commits/commit.$suffix" |
+    while IFS= read -r file
+    do 
+        cp ".pushy/commits/commit.$suffix/$file" ".pushy/branches/$branch"
+    done
+fi
+
+#Return Commit Success Message
+echo "Committed as commit $suffix"
+exit 0

@@ -1,0 +1,48 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 0 
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 22-03-2024
+#
+# pushy-show
+# discription: prints the contents of the specified filename as of the specified commit 
+# ===========================================================================================
+
+
+#Split the argument into commit numberand filename 
+commit_no=$(echo "$1" | cut -d ":" -f1)
+filename=$(echo "$1" | cut -d ":" -f2)
+
+
+#Check if commit number is specified
+if test "$commit_no" -ge 0 2> /dev/null
+then
+    #Check if commit number is invalid i.e a commit does not exist with specified number
+    if ! test -d ".pushy/commits/commit.$commit_no"
+    then
+        echo 1<&2 "$0: error: unknown commit '$commit_no'"
+        exit 3
+    else
+        #Check if specified file exists in commit
+        if ! test -f .pushy/commits/"commit.$commit_no"/"$filename"
+        then 
+            echo 1<&2 "$0: error: '$filename' not found in commit $commit_no"
+            exit 2
+        else
+            #Display contents of specified file in the selected commit
+            cat ".pushy/commits/commit.$commit_no/$filename"
+        fi
+    fi
+else
+    #Check if specified file exists in index
+        if ! test -f ".pushy/index/$filename"
+        then 
+            echo 1<&2 "$0: error: '$filename' not found in index"
+            exit 2
+        else
+            #Display contents of specified file in index
+            cat ".pushy/index/$filename"
+        fi
+fi

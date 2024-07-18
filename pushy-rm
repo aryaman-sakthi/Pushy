@@ -1,0 +1,165 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 1 
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 23-03-2024
+#
+# pushy-rm
+# discription: removes a file from the index, or, from the current directory and index.
+# ===========================================================================================
+
+#Test for correct arguments
+if test "$#" -ge 3 -a "$1" = "--force" -a "$2" = "--cached"
+then 
+    rm_type="forced_cached"
+
+elif test "$#" -ge 2 -a "$1" = "--force"
+then
+    rm_type="forced"
+
+elif test "$#" -ge 2 -a "$1" = "--cached" 
+then
+    rm_type="cached"
+
+elif test "$#" -ge 1 -a "$1" != "--force" -a "$1" != "--cached"
+then 
+    rm_type="standard"
+else
+    echo 1>&2 "usage: pushy-rm [--force] [--cached] <filenames>"
+    exit 4
+fi 
+
+#Track Status wiout displaying 
+pushy-status 1> /dev/null 
+
+#Current directory
+curr_dir=$(pwd)
+#Index directory
+index_dir='.pushy/index'
+#Last commit directory
+suffix=$(pushy-log | head -n1 | cut -d ' ' -f1)
+commit_dir=".pushy/commits/commit.$suffix"
+
+#List of files in argument
+filelist=$(echo "$@" | sed 's/\(--cached \|--force \)//g' )
+
+#Exit if files do not exist in pushy repository
+for file in $filelist
+do
+    if ! test -f "$index_dir/$file"
+    then
+        echo 1>&2 "$0: error: '$file' is not in the pushy repository"
+        exit 2
+    fi
+done
+
+#Cached rm:
+if test "$rm_type" = "cached"
+then
+    #Check differential status for each file in index with commit and currerent directory
+    for file in $filelist
+    do 
+        
+        #Check if index file is different from current directory 
+        diff -q "$index_dir/$file" "$file" > /dev/null 2>&1
+        curr_status=$? 
+        #Check if index file is different from latest commit 
+        diff -q "$index_dir/$file" "$commit_dir/$file" > /dev/null 2>&1
+        commit_status=$? #0 - same ; 1 - different
+
+        #If index is different from both then give error and exit
+        if test "$curr_status" -ne 0 -a "$commit_status" -ne 0
+        then
+            echo 1>&2 "$0: error: '$file' in index is different to both the working file and the repository"
+            exit 4
+        fi
+    done
+
+    #Remove files from index 
+    cd $index_dir
+    rm $filelist
+    cd $curr_dir
+
+    #Update Status of each file
+    for file in $filelist
+    do
+        sed -i "s/^"$file\ .*"/"$file" - deleted from index/" ".pushy/status.txt"
+    done
+
+#Standard rm:
+elif test "$rm_type" = "standard"
+then
+    #Check differential status for each file in index with commit 
+    for file in $filelist
+    do 
+        #Check if index file is different from current directory 
+        diff -q "$index_dir/$file" "$file" > /dev/null 2>&1
+        curr_status=$? 
+        #Check if index file is different from latest commit 
+        diff -q "$index_dir/$file" "$commit_dir/$file" > /dev/null 2>&1
+        commit_status=$? #0 - same ; 1 - different
+
+        
+        #If index is different from both then give error and exit
+        if test "$curr_status" -ne 0 -a "$commit_status" -ne 0
+        then
+            echo 1>&2 "$0: error: '$file' in index is different to both the working file and the repository"
+            exit 4
+
+        #If index is different from commit then give error and exit
+        elif test "$commit_status" -ne 0
+        then
+            echo 1>&2 "$0: error: '$file' has staged changes in the index"
+            exit 4
+        
+        #If index is different from current directory then give error and exit
+        elif test "$curr_status" -ne 0
+        then
+            echo 1>&2 "$0: error: '$file' in the repository is different to the working file"
+            exit 4
+        fi
+    done
+
+    #Remove files from index and current directory
+    cd $index_dir
+    rm $filelist
+    cd $curr_dir
+    rm $filelist
+
+    #Update Status of each file
+    for file in $filelist
+    do
+        sed -i "s/^"$file\ .*"/"$file" - file deleted, deleted from index/" ".pushy/status.txt"
+    done
+
+#Forced_cached rm:
+elif test "$rm_type" = "forced_cached"
+then 
+    #Forefully remove files from index
+    cd $index_dir
+    rm $filelist
+    cd $curr_dir
+
+    #Update Status of each file
+    for file in $filelist
+    do
+        sed -i "s/^"$file\ .*"/"$file" - deleted from index/" ".pushy/status.txt"
+    done
+
+#Forced rm:
+elif test "$rm_type" = "forced" 
+then
+    #Forefully remove files from index and current directory
+    cd $index_dir
+    rm $filelist
+    cd $curr_dir
+    rm $filelist
+
+    #Update Status of each file
+    for file in $filelist
+    do
+        sed -i "s/^"$file\ .*"/"$file" - file deleted, deleted from index/" ".pushy/status.txt"
+    done
+fi

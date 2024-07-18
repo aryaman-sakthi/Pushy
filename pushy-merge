@@ -1,0 +1,80 @@
+#!/bin/dash
+
+# ===========================================================================================
+# COMP2041 ASSIGNMENT 1 : Subset 2
+#
+# Written by: Aryaman Sakthivel (z5455785)
+# Date: 25-03-2024
+#
+# pushy-merge
+# discription: this command adds the changes that have been made to the specified branch or 
+#              commit to the index, and commits them.
+# ===========================================================================================
+
+
+#Test for valid arguments and set merge type
+if "$#" -eq 3 -a "$2" = '-m' -a "$1" -eq "$1" 2> /dev/null
+then    
+    merge_type='commit_merge'
+    suffix="$1"
+
+elif "$#" -eq 3 -a "$2" = '-m' -a "$1" = "$1"
+then 
+    merge_type='branch_merge'
+    branch_name="$1"
+
+elif "$#" -eq 1 -a "$1" != '-m'
+then 
+    echo 1>&2 "$0: error: empty commit message"
+    exit 6
+
+else    
+    echo 1>&2 "usage: pushy-merge <branch|commit> -m message"
+    exit 6
+
+fi
+
+
+#Merge Branch:
+if "$merge_type" = 'branch_merge'
+then 
+    #Test if branch dosent exsist
+    if test ! -d ".pushy/branches/$branch_name" 
+    then 
+        echo 1>&2 "$0: error: unknown branch '$branch_name'"
+        exit 6
+    fi
+
+    
+    files=$(ls -A ".pushy/branches/$branch")
+    #Switch to master directory 
+    pushy-checkout master 2> /dev/null
+
+    #Add all the files to the index
+    pushy-add $files
+    #Commit all
+    pushy-commit -m "$3" 1>/dev/null
+    
+    echo "Fast-forward: no commit created"
+
+#Commit Branch:
+elif "$merge_type" = 'commit_merge'
+then
+    #Test if commit dosent exist
+    if test ! -d ".pushy/commits/$suffix" 
+    then 
+        echo 1>&2 "$0: error: unknown commit '$suffix'"
+        exit 6
+    fi
+
+    files=$(ls -A ".pushy/commits/commit.$suffix")
+    #Switch to master directory 
+    pushy-checkout master 2> /dev/null
+
+    #Add all the files to the index
+    pushy-add $files
+    #Commit all
+    pushy-commit -m "$3" 1>/dev/null
+    
+    echo "Fast-forward: no commit created"
+fi
