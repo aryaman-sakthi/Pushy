@@ -22,7 +22,7 @@ Pushy is a simplified version control system inspired by Git, implemented as par
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/yourusername/pushy.git
+   git clone https://github.com/aryaman-sakthi/Pushy.git
    cd pushy
 
 2. Ensure your system has /bin/dash installed. If not, you can install it using your package manager.  
