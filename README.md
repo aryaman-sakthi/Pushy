@@ -31,5 +31,10 @@ Pushy is a simplified version control system inspired by Git, implemented as par
    ```sh
    chmod -R 777 .
 
+## Built With:
+![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white) 
+![Bash](https://img.shields.io/badge/Bash-4EAA25?logo=gnubash&logoColor=fff&style=for-the-badge)
+![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+
 ## Conclusion
 Pushy serves as an educational tool to deepen understanding of version control concepts and shell scripting. By implementing a simplified version of Git, users gain hands-on experience with core version control operations and the intricacies of shell programming.
